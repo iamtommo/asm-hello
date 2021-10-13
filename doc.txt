@@ -1,0 +1,113 @@
+https://www.cs.uaf.edu/2017/fall/cs301/reference/x86_64.html
+
+-----------------------------------
+calling conventions:
+ x64 linux function params:
+  (int & ptrs) rdi, rsi, rdx, rcx, r8, r9, rest on stack
+  (float&double) xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+
+
+ win64 function params: rcx, rdx, r8, r9
+
+additional params are pushed on stack, right to left and _removed by caller_ after call.
+
+
+-------------------------------------
+x64 uses 16 64bit registers
+
+cheatsheet:
+https://cs.brown.edu/courses/cs033/docs/guides/x64_cheatsheet.pdf
+r0  r1  r2  r3  r4  r5  r6  r7  r8  r9  r10  r11  r12  r13  r14  r15
+rax rcx rdx rbx rsp rbp rsi rdi
+x86->64 cheatsheet:
+    8byte register      0..3    0..1    0
+    rax                 eax     ax      al
+    rcx                 ecx     cx      cl
+    rdx                 edx     dx      dl
+    rbx                 ebx     bx      bl
+    rsi                 esi     si      sil
+    rdi                 edi     di      dil
+    rsp                 esp     sp      spl
+    rbp                 ebp     bp      bpl
+    r8                  r8d     r8w     r8b
+    r9                  r9d     r9w     r9b
+    r10                 r10d    r10w    r10b
+    r11                 r11d    r11w    r11b
+    r12                 r12d    r12w    r12b
+    r13                 r13d    r13w    r13b
+    r14                 r14d    r14w    r14b
+    r15                 r15d    r15w    r15b
+
+preserved registers (callee-save registers):
+rbp, rbx, r12, r13, r14, r15
+
+
+----------------------------------
+compile:
+    nasm -felf64 file.asm
+    //ld file.o -o output.o
+    gcc file.o
+
+-------------------------------------
+randnotes:
+    db pseudo instruction: declare bytes to be in memory at runtime
+
+----------------------------------------
+immediate operands:
+200          ; decimal
+0200         ; still decimal - the leading 0 does not make it octal
+0200d        ; explicitly decimal - d suffix
+0d200        ; also decimal - 0d prefex
+0c8h         ; hex - h suffix, but leading 0 is required because c8h looks like a var
+0xc8         ; hex - the classic 0x prefix
+0hc8         ; hex - for some reason NASM likes 0h
+310q         ; octal - q suffix
+0q310        ; octal - 0q prefix
+11001000b    ; binary - b suffix
+0b1100_1000  ; binary - 0b prefix, and by the way, underscores are allowed
+
+memory operands:
+[ number ]
+[ reg ]
+[ reg + reg*scale ]      scale is 1, 2, 4, or 8 only
+[ reg + number ]
+[ reg + reg*scale + number ]
+The number is called the displacement; the plain register is called the base; the register with the scale is called the index.
+
+[750]                  ; displacement only
+[rbp]                  ; base register only
+[rcx + rsi*4]          ; base + index * scale
+[rbp + rdx]            ; scale is 1
+[rbx - 8]              ; displacement is -8
+[rax + rdi*8 + 500]    ; all four components
+[rbx + counter]        ; uses the address of the variable 'counter' as the displacement
+
+-----------------------------------------
+position independent code:
+for ASLR (address space layout randomization)
+wrt ..plt
+Referring to a procedure name using wrt ..plt causes the linker to build a procedure linkage table entry for the symbol,
+and the reference gives the address of the PLT entry. You can only use this in contexts which would generate a PC-relative
+relocation normally (i.e. as the destination for CALL or JMP), since ELF contains no relocation type to refer to PLT entries absolutely.
+
+------------------------------------------
+sections:
+    .text = read only
+    .data = initialized data
+    .bss = uninitialized data
+
+-------------------------------------------
+stack frames:
+https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64/
+
+
+-------------------------------------------
+windows stack shadow space:
+x64 calling convention requires you to allocate 32 bytes of shadow space before each call, and remove it after your call.
+(can be left uninitialized)
+https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
+
+i.e.
+sub rsp, 28h ; (28hex = 40 dec, 32 bytes for shadow space, 8 bytes for align)
+; do ur thing
+add rsp, 28h
